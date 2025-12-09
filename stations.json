@@ -1,0 +1,12 @@
+[
+  {
+    "station_id": 1,
+    "station_name": "eins",
+    "station_color": "#1ED9B4"
+  },
+  {
+    "station_id": 2,
+    "station_name": "zwei",
+    "station_color": "#373B4B"
+  }
+]
