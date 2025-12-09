@@ -141,4 +141,4 @@ Ein großes Dankeschön an:
 
 ---
 
-Viel Spaß mit deinem laut.fm-Bot! 🎉
+Viel Spaß mit deinem laut.fm Bot Template! 🎉
