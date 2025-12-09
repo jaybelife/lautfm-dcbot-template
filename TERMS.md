@@ -6,7 +6,7 @@ Vielen Dank, dass du das **laut.fm Bot Template** verwendest! Bevor du das Templ
 
 ## 1. Allgemeine Bestimmungen
 - Dieses Template wurde erstellt, um Entwicklern eine Grundlage für die Erstellung eines Discord-Bots zu bieten, der laut.fm-Radiosender integriert.
-- Das Template ist **kostenlos** und darf nur für private Zwecke verwendet werden, solange die Bedingungen eingehalten werden.
+- Das Template ist **kostenlos** und darf für private und kommerzielle Zwecke verwendet werden, solange die Bedingungen eingehalten werden.
 
 ---
 
@@ -42,5 +42,6 @@ Vielen Dank, dass du das **laut.fm Bot Template** verwendest! Bevor du das Templ
 ---
 
 Mit der Nutzung dieses Templates erklärst du dich mit den oben genannten Bedingungen einverstanden. Bei Fragen oder Problemen kannst du den Urheber über [jaybelife.de](https://www.jaybelife.de) kontaktieren.
+
 
 Viel Spaß mit deinem laut.fm Bot Template! 🎶
