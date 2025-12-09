@@ -12,7 +12,7 @@ Vielen Dank, dass du das **laut.fm Bot Template** verwendest! Bevor du das Templ
 
 ## 2. Änderungen am Template
 - Du darfst das Template anpassen und erweitern, um es an deine Bedürfnisse anzupassen.
-- Änderungen am Code, die den ursprünglichen Urheber (Julian) entfernen oder unkenntlich machen, sind **nicht erlaubt**.
+- Änderungen am Code, die den ursprünglichen Urheber (Julian Gebauer) entfernen oder unkenntlich machen, sind **nicht erlaubt**.
 - Der Hinweis im Footer des Bots (`» made by jay with heart | Version X.X`) darf **nicht entfernt oder verändert** werden.
 
 ---
@@ -45,3 +45,4 @@ Mit der Nutzung dieses Templates erklärst du dich mit den oben genannten Beding
 
 
 Viel Spaß mit deinem laut.fm Bot Template! 🎶
+
