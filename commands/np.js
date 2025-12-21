@@ -46,6 +46,7 @@ export async function execute(interaction) {
 
     const embed = new EmbedBuilder()
       .setTitle(`Du hörst ${stationData.display_name}`)
+      .setDescription(stationData.description || 'Keine Beschreibung verfügbar.')
       .addFields(
         { name: 'Künstler', value: currentSong.artist.name || 'Unbekannt', inline: false },
         { name: 'Titel', value: currentSong.title || 'Unbekannt', inline: false },

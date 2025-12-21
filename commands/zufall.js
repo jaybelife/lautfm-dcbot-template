@@ -12,42 +12,9 @@ const __dirname = path.dirname(__filename);
 
 const stations = JSON.parse(fs.readFileSync(path.join(__dirname, '../stations.json'), 'utf-8'));
 
-async function fetchStationDisplayNames() {
-  const stationChoices = await Promise.all(
-    stations.map(async (station) => {
-      try {
-        const stationApiUrl = `https://api.laut.fm/station/${station.station_name}`;
-        const stationData = await axios.get(stationApiUrl).then(res => res.data);
-
-        return {
-          name: stationData.display_name,
-          value: station.station_id.toString()
-        };
-      } catch (error) {
-        log('error', `Fehler beim Abrufen des Displaynamens für ${station.station_name}.`, { error: error.message });
-        return {
-          name: station.station_name,
-          value: station.station_id.toString()
-        };
-      }
-    })
-  );
-
-  return stationChoices;
-}
-
-const stationChoices = await fetchStationDisplayNames();
-
 export const data = new SlashCommandBuilder()
-  .setName('radio')
-  .setDescription('Spielt eine ausgewählte Radiostation ab.')
-  .addStringOption(option =>
-    option
-      .setName('station')
-      .setDescription('Wähle eine Radiostation aus')
-      .setRequired(true)
-      .addChoices(...stationChoices)
-  );
+  .setName('zufall')
+  .setDescription('Spielt eine zufällige Radiostation im Sprachkanal ab.');
 
 function monitorChannel(connection, channel, guildId) {
   const interval = setInterval(() => {
@@ -68,21 +35,14 @@ function monitorChannel(connection, channel, guildId) {
 export async function execute(interaction) {
   await interaction.deferReply({ flags: 64 });
 
-  const stationId = parseInt(interaction.options.getString('station'));
-  const station = stations.find(s => s.station_id === stationId);
-
-  if (!station) {
-    await interaction.editReply({ content: '❌ Station nicht gefunden.', flags: 64 });
-    log('warn', 'Station nicht gefunden.', { stationId });
-    return;
-  }
-
-  const channel = interaction.member.voice.channel;
-  if (!channel) {
-    await interaction.editReply({ content: '❌ Du musst dich in einem Sprachkanal befinden, um eine Radiostation abspielen zu können.', flags: 64 });
+  const userChannel = interaction.member.voice.channel;
+  if (!userChannel) {
+    await interaction.editReply({ content: '❌ Du musst dich in einem Sprachkanal befinden, um diesen Befehl zu verwenden.', flags: 64 });
     log('warn', 'Benutzer ist nicht in einem Sprachkanal.', { user: interaction.user.username });
     return;
   }
+
+  const randomStation = stations[Math.floor(Math.random() * stations.length)];
 
   try {
     if (serverData.has(interaction.guild.id)) {
@@ -94,9 +54,9 @@ export async function execute(interaction) {
     }
 
     const connection = joinVoiceChannel({
-      channelId: channel.id,
-      guildId: channel.guild.id,
-      adapterCreator: channel.guild.voiceAdapterCreator,
+      channelId: userChannel.id,
+      guildId: userChannel.guild.id,
+      adapterCreator: userChannel.guild.voiceAdapterCreator,
       selfDeaf: false
     });
 
@@ -104,25 +64,25 @@ export async function execute(interaction) {
 
     const player = createAudioPlayer();
 
-    const stationApiUrl = `https://api.laut.fm/station/${station.station_name}`;
+    const stationApiUrl = `https://api.laut.fm/station/${randomStation.station_name}`;
     const stationData = await axios.get(stationApiUrl).then(res => res.data);
 
     const streamUrl = `${stationData.stream_url}?ref=discord_bot&bot_id=${interaction.client.user.id}`;
     const stationLogo = stationData.images?.station || null;
     const stationDescription = stationData.description || null;
     const stationPageUrl = stationData.page_url || null;
-    
+
     const resource = createAudioResource(streamUrl, { inlineVolume: true });
     resource.volume.setVolume(0.5);
     player.play(resource);
     connection.subscribe(player);
 
-    serverData.set(interaction.guild.id, { connection, station, player });
+    serverData.set(interaction.guild.id, { connection, station: randomStation, player });
 
-    monitorChannel(connection, channel, interaction.guild.id);
+    monitorChannel(connection, userChannel, interaction.guild.id);
 
-    const songApiUrl = `https://api.laut.fm/station/${station.station_name}/current_song`;
-    const listenersApiUrl = `https://api.laut.fm/station/${station.station_name}/listeners`;
+    const songApiUrl = `https://api.laut.fm/station/${randomStation.station_name}/current_song`;
+    const listenersApiUrl = `https://api.laut.fm/station/${randomStation.station_name}/listeners`;
 
     const [songResponse, listenersResponse] = await Promise.all([
       axios.get(songApiUrl),
@@ -134,7 +94,7 @@ export async function execute(interaction) {
 
     const embed = new EmbedBuilder()
       .setTitle(`Du hörst ${stationData.display_name}`)
-      .setColor(station.station_color);
+      .setColor(randomStation.station_color);
 
     if (stationDescription) {
       embed.setDescription(stationDescription);
@@ -159,13 +119,13 @@ export async function execute(interaction) {
 
     await interaction.editReply({ embeds: [embed], components: [button], flags: 64 });
 
-    log('success', 'Radio gestartet.', {
+    log('success', 'Zufällige Station gestartet.', {
       server: { name: interaction.guild.name, id: interaction.guild.id },
-      channel: { name: channel.name, id: channel.id },
-      stream: { name: station.station_name, id: station.station_id }
+      channel: { name: userChannel.name, id: userChannel.id },
+      stream: { name: randomStation.station_name, id: randomStation.station_id }
     });
   } catch (error) {
-    log('error', 'Fehler beim Beitreten des Sprachkanals.', { error: error.message });
-    await interaction.editReply({ content: '❌ Fehler beim Beitreten des Sprachkanals. Bitte versuche es später erneut.', flags: 64 });
+    log('error', 'Fehler beim Starten der zufälligen Station.', { error: error.message });
+    await interaction.editReply({ content: '❌ Fehler beim Abspielen der zufälligen Station. Bitte versuche es später erneut.', flags: 64 });
   }
 }

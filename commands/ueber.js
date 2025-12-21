@@ -37,17 +37,13 @@ export async function execute(interaction) {
       { name: '🌐 Server', value: `${totalServers}`, inline: true },
       { name: '🎧 Aktive Zuhörer', value: `${activeListeners}`, inline: true }
     )
-    .setFooter({ text: '»  made by jay with heart | Version ' + process.env.BOT_VERSION }); // Dieser Inhalt darf nicht entfernt oder verändert werden. Danke fürs Verständnis! :)
+    .setFooter({ text: '»  made by jay with heart' }); // Dieser Inhalt darf nicht entfernt oder verändert werden. Danke fürs Verständnis! :)
 
   const buttons = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setLabel('🤖 Bot hinzufügen')
-      .setStyle(ButtonStyle.Link)
-      .setURL(`https://discord.com/oauth2/authorize?client_id=${interaction.client.user.id}&permissions=693674199297&scope=bot%20applications.commands`), // Hier brauchst du nichts anpassen, das ist der Standard-Link zum Hinzufügen des Bots.
-    new ButtonBuilder()
       .setLabel('🌐 Website')
       .setStyle(ButtonStyle.Link)
-      .setURL(process.env.WEBSITE_URL)
+      .setURL(process.env.WEBSITE_URL || 'https://laut.fm/') // Link zur Website aus der .env-Datei
   );
 
   await interaction.editReply({ embeds: [embed], components: [buttons], flags: 64 });
