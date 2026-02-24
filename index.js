@@ -1,8 +1,12 @@
 import { Client, GatewayIntentBits, Collection, REST, Routes } from 'discord.js';
+import { joinVoiceChannel, createAudioPlayer, createAudioResource, VoiceConnectionStatus, entersState } from '@discordjs/voice';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import axios from 'axios';
+import serverData from './serverData.js';
+import { getOnAirConfig } from './dbManager.js';
 
 dotenv.config();
 
@@ -15,6 +19,9 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 client.commands = new Collection();
 client.voiceConnection = null;
 global.currentStationId = null;
+
+// Map um zu tracken welche Guilds gerade einen OnAir Stream starten (verhindert Duplicates)
+const onAirStarting = new Set();
 
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -126,6 +133,66 @@ client.once('clientReady', async () => {
     // Fehler beim Synchronisieren der Befehle
     console.error(error);
   }
+
+  // OnAir Channels rejoin nach Bot Neustart
+  console.log("OnAir Channels werden wiederhergestellt...");
+  try {
+    const dbManager = await import('./dbManager.js');
+    const allConfigs = dbManager.getAllOnAirConfigs();
+
+    for (const [guildId, config] of Object.entries(allConfigs)) {
+      try {
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) continue;
+
+        const channel = guild.channels.cache.get(config.voiceChannelId);
+        if (!channel || !channel.isVoiceBased()) continue;
+
+        const stations = JSON.parse(fs.readFileSync(path.join(__dirname, 'stations.json'), 'utf-8'));
+        const station = stations.find(s => s.station_id === config.stationId);
+        if (!station) continue;
+
+        // Bot in Channel joinen
+        const connection = joinVoiceChannel({
+          channelId: config.voiceChannelId,
+          guildId: guildId,
+          adapterCreator: guild.voiceAdapterCreator,
+          selfDeaf: false
+        });
+
+        await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
+
+        // Prüfe ob User im Channel sind
+        const nonBotMembers = channel.members.filter(m => !m.user.bot).size;
+
+        if (nonBotMembers > 0) {
+          // Stream starten wenn User drin sind
+          const player = createAudioPlayer();
+
+          const stationApiUrl = `https://api.laut.fm/station/${station.station_name}`;
+          const stationData = await axios.get(stationApiUrl).then(res => res.data);
+
+          const streamUrl = `${stationData.stream_url}?ref=discord_bot&bot_id=${client.user.id}`;
+
+          const resource = createAudioResource(streamUrl, { inlineVolume: true });
+          resource.volume.setVolume(0.5);
+          player.play(resource);
+          connection.subscribe(player);
+
+          serverData.set(guildId, { connection, station, player, isOnAir: true, guildId: guildId, lastStart: Date.now() });
+          console.log(`[OnAir] ✅ Channel ${channel.name} auf ${guild.name} wiederhergestellt (Stream aktiv)`);
+        } else {
+          // Connection halten aber Stream inaktiv
+          serverData.set(guildId, { connection, station: null, player: null, isOnAir: false, guildId: guildId });
+          console.log(`[OnAir] ✅ Channel ${channel.name} auf ${guild.name} wiederhergestellt (wartet auf User)`);
+        }
+      } catch (err) {
+        console.error(`[OnAir] Fehler beim Rejoin des Channels ${config.voiceChannelId}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('[OnAir] Fehler beim Laden der OnAir-Konfigurationen:', err.message);
+  }
 });
 
 // Event-Listener für Interaktionen
@@ -140,6 +207,91 @@ client.on('interactionCreate', async (interaction) => {
   } catch (error) {
     console.error(error);
     await interaction.reply({ content: 'There was an error executing this command.', flags: 64 });
+  }
+});
+
+// OnAir VoiceStateUpdate Event
+client.on('voiceStateUpdate', async (oldState, newState) => {
+  const guild = newState.guild;
+  const config = getOnAirConfig(guild.id);
+
+  // Wenn kein OnAir aktiv ist, ignorieren
+  if (!config || !config.voiceChannelId || !config.stationId) return;
+
+  const voiceChannel = guild.channels.cache.get(config.voiceChannelId);
+  if (!voiceChannel) return;
+
+  const nonBotMembers = voiceChannel.members.filter(m => !m.user.bot).size;
+  const existingData = serverData.get(guild.id);
+
+  // Wenn ein User in den OnAir Channel beitritt
+  if (newState.channelId === config.voiceChannelId && nonBotMembers > 0) {
+    // Wenn schon ein Stream läuft oder wir gerade dabei sind zu starten, ignorieren
+    if ((existingData && existingData.isOnAir) || onAirStarting.has(guild.id)) {
+      return;
+    }
+
+    // Flag setzen dass wir gerade starten
+    onAirStarting.add(guild.id);
+
+    // Stream starten
+    try {
+      const stations = JSON.parse(fs.readFileSync(path.join(__dirname, 'stations.json'), 'utf-8'));
+      const station = stations.find(s => s.station_id === config.stationId);
+
+      if (!station) {
+        onAirStarting.delete(guild.id);
+        return;
+      }
+
+      // Alte Connection zerstören wenn vorhanden
+      if (existingData && existingData.connection && existingData.connection.state.status !== VoiceConnectionStatus.Destroyed) {
+        existingData.connection.destroy();
+      }
+
+      const connection = joinVoiceChannel({
+        channelId: config.voiceChannelId,
+        guildId: guild.id,
+        adapterCreator: guild.voiceAdapterCreator,
+        selfDeaf: false
+      });
+
+      await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
+
+      const player = createAudioPlayer();
+
+      const stationApiUrl = `https://api.laut.fm/station/${station.station_name}`;
+      const stationData = await axios.get(stationApiUrl).then(res => res.data);
+
+      const streamUrl = `${stationData.stream_url}?ref=discord_bot&bot_id=${client.user.id}`;
+
+      const resource = createAudioResource(streamUrl, { inlineVolume: true });
+      resource.volume.setVolume(0.5);
+      player.play(resource);
+      connection.subscribe(player);
+
+      serverData.set(guild.id, { connection, station, player, isOnAir: true, guildId: guild.id, lastStart: Date.now() });
+
+      console.log(`[OnAir] Stream gestartet auf ${guild.name} - ${station.station_name}`);
+    } catch (error) {
+      console.error('OnAir Stream Start Fehler:', error);
+    } finally {
+      // Flag entfernen nachdem wir fertig sind
+      onAirStarting.delete(guild.id);
+    }
+  }
+
+  // Wenn der letzte User den OnAir Channel verlässt
+  if (oldState.channelId === config.voiceChannelId && nonBotMembers === 0) {
+    if (existingData && existingData.connection) {
+      // Nur den Player stoppen, Connection bleibt aktiv (Bot bleibt im Channel!)
+      if (existingData.player) {
+        existingData.player.stop();
+      }
+      // Speichere dass Stream gestoppt ist, aber Connection noch aktiv
+      serverData.set(guild.id, { ...existingData, isOnAir: false });
+      console.log(`[OnAir] Stream gestoppt auf ${guild.name} - Kein User im Channel (Bot bleibt im Channel)`);
+    }
   }
 });
 

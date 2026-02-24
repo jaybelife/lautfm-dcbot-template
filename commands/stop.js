@@ -1,5 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import serverData from '../serverData.js';
+import { deleteOnAirConfig } from '../dbManager.js';
 import { log } from '../logger.js';
 
 export const data = new SlashCommandBuilder()
@@ -34,6 +35,11 @@ export async function execute(interaction) {
   try {
     connection.destroy();
     serverData.delete(interaction.guild.id);
+
+    // Auch OnAir Konfiguration löschen wenn aktiv
+    if (serverInfo.isOnAir) {
+      deleteOnAirConfig(interaction.guild.id);
+    }
 
     log('success', 'Wiedergabe gestoppt und Sprachkanal verlassen.', {
       server: { name: interaction.guild.name, id: interaction.guild.id },

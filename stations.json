@@ -8,5 +8,90 @@
     "station_id": 2,
     "station_name": "zwei",
     "station_color": "#373B4B"
+  },
+  {
+    "station_id": 3,
+    "station_name": "poploungecafe",
+    "station_color": "#EE3023"
+  },
+  {
+    "station_id": 4,
+    "station_name": "radio-am-bad-2",
+    "station_color": "#64C5D6"
+  },
+  {
+    "station_id": 5,
+    "station_name": "simliveradio",
+    "station_color": "#ff630e"
+  },
+  {
+    "station_id": 6,
+    "station_name": "radioselm",
+    "station_color": "#B50000"
+  },
+  {
+    "station_id": 7,
+    "station_name": "lionfm",
+    "station_color": "#858585"
+  },
+  {
+    "station_id": 8,
+    "station_name": "radiorheinland",
+    "station_color": "#102646"
+  },
+  {
+    "station_id": 9,
+    "station_name": "jazz",
+    "station_color": "#DD0300"
+  },
+  {
+    "station_id": 10,
+    "station_name": "kpophits",
+    "station_color": "#45577B"
+  },
+  {
+    "station_id": 11,
+    "station_name": "weihnacht",
+    "station_color": "#B10000"
+  },
+  {
+    "station_id": 12,
+    "station_name": "lofi",
+    "station_color": "#E05EA6"
+  },
+  {
+    "station_id": 13,
+    "station_name": "linefm",
+    "station_color": "#4B4B7D"
+  },
+  {
+    "station_id": 14,
+    "station_name": "reggaeton-fm",
+    "station_color": "#494D42"
+  },
+  {
+    "station_id": 15,
+    "station_name": "schranz",
+    "station_color": "#1FD0C0"
+  },
+  {
+    "station_id": 16,
+    "station_name": "rockmix",
+    "station_color": "#E6E7EB"
+  },
+  {
+    "station_id": 17,
+    "station_name": "brovenco",
+    "station_color": "#FFFF00"
+  },
+  {
+    "station_id": 18,
+    "station_name": "allenbach-rock-radio",
+    "station_color": "#C4113B"
+  },
+  {
+    "station_id": 19,
+    "station_name": "404",
+    "station_color": "#1ED9B4"
   }
 ]
